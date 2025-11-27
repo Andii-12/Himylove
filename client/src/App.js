@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import FloatingHearts from './components/FloatingHearts';
 import AdminPanel from './pages/AdminPanel';
+import MusicPlayer from './components/MusicPlayer';
 import './App.css';
 
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5001';
@@ -56,6 +57,7 @@ const LoveExperience = () => {
   const [isSubmittingWhy, setIsSubmittingWhy] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
   const [whyError, setWhyError] = useState('');
+  const [showMusicPlayer, setShowMusicPlayer] = useState(false);
   const noButtonCooldownRef = useRef(0);
 
   const question = content?.prompts?.question || fallbackContent.prompts.question;
@@ -157,9 +159,20 @@ const LoveExperience = () => {
     }
   };
 
+  if (showMusicPlayer) {
+    return <MusicPlayer isOpen={showMusicPlayer} onClose={() => setShowMusicPlayer(false)} />;
+  }
+
   if (currentView === 'intro') {
     return (
       <main className="app-shell">
+        <button
+          className="music-section-btn"
+          onClick={() => setShowMusicPlayer(true)}
+          title="Music"
+        >
+          🎵
+        </button>
         <FloatingHearts count={14} />
         <div className="intro-screen">
           <p className="eyebrow">secret mission</p>
@@ -202,11 +215,18 @@ const LoveExperience = () => {
   }
 
   if (currentView === 'final') {
-    return <FinalQuestionView />;
+    return <FinalQuestionView showMusicPlayer={showMusicPlayer} setShowMusicPlayer={setShowMusicPlayer} />;
   }
 
   return (
     <main className="app-shell">
+      <button
+        className="music-section-btn"
+        onClick={() => setShowMusicPlayer(true)}
+        title="Music"
+      >
+        🎵
+      </button>
       <FloatingHearts count={18} />
       <div className="question-screen">
         <p className="eyebrow">phase two</p>
@@ -277,12 +297,23 @@ const LoveExperience = () => {
   );
 }
 
-function FinalQuestionView() {
+function FinalQuestionView({ showMusicPlayer, setShowMusicPlayer }) {
   const [showCongratsGif, setShowCongratsGif] = useState(false);
+
+  if (showMusicPlayer) {
+    return <MusicPlayer isOpen={showMusicPlayer} onClose={() => setShowMusicPlayer(false)} />;
+  }
 
   if (showCongratsGif) {
     return (
       <main className="app-shell">
+        <button
+          className="music-section-btn"
+          onClick={() => setShowMusicPlayer(true)}
+          title="Music"
+        >
+          🎵
+        </button>
         <FloatingHearts count={24} />
         <div className="question-screen">
           <p className="eyebrow">sealed with a gif</p>
@@ -300,6 +331,13 @@ function FinalQuestionView() {
 
   return (
     <main className="app-shell">
+      <button
+        className="music-section-btn"
+        onClick={() => setShowMusicPlayer(true)}
+        title="Music"
+      >
+        🎵
+      </button>
       <FloatingHearts count={20} />
       <div className="question-screen">
         <p className="eyebrow">final message</p>

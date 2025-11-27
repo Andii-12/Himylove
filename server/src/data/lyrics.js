@@ -1,0 +1,26 @@
+module.exports = {
+  'neighborhood-reflection': [
+    'In the neighborhood, I see my reflection',
+    'Walking down the street, lost in my direction',
+    'Every window shows a different me',
+    'Wondering who I really want to be',
+    'In the mirror of my mind',
+    'I search for what I cannot find',
+    'Reflections of the past',
+    'Memories that always last',
+    'In this neighborhood of dreams',
+    'Nothing is quite what it seems',
+    'I see myself in every face',
+    'Trying to find my own place',
+    'Reflection, reflection',
+    'Show me my true direction',
+    'In this neighborhood we call home',
+    'I walk these streets alone',
+    'But I know I\'m not really on my own',
+    'When I see your reflection next to mine',
+    'Together we shine, together we find',
+    'Our way through this neighborhood',
+    'Where love is understood',
+  ],
+};
+

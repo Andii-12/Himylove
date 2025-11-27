@@ -1,5 +1,6 @@
 const Response = require('../models/Response');
 const prompts = require('../data/prompts');
+const lyrics = require('../data/lyrics');
 
 const getPrompts = (req, res) => {
   res.json({
@@ -46,10 +47,16 @@ const getLatestResponses = async (req, res, next) => {
   }
 };
 
+const getLyrics = (req, res) => {
+  const songLyrics = lyrics['neighborhood-reflection'] || [];
+  res.json({ lyrics: songLyrics });
+};
+
 module.exports = {
   getPrompts,
   getRandomDare,
   createResponse,
   getLatestResponses,
+  getLyrics,
 };
 
