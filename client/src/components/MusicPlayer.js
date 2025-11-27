@@ -73,54 +73,93 @@ const MusicPlayer = ({ isOpen, onClose }) => {
   };
 
   const handlePlay = async () => {
-    if (!audioRef.current) {
-      // Try to load audio file
-      try {
-        const audioUrl = '/music/neighborhood-reflection.mp3';
-        audioRef.current = new Audio(audioUrl);
-        
-        audioRef.current.onerror = () => {
-          console.warn('Audio file not found, playing without audio');
-          startLyricsOnly();
-        };
-
-        audioRef.current.oncanplaythrough = () => {
-          // Auto-play when ready
-          audioRef.current.play().catch((err) => {
-            console.warn('Auto-play prevented, user interaction required:', err);
-            startLyricsOnly();
-          });
-          setIsPlaying(true);
-          startLyricsDisplay();
-        };
-
-        audioRef.current.onended = () => {
-          setIsPlaying(false);
-          if (lyricsIntervalRef.current) {
-            clearInterval(lyricsIntervalRef.current);
-          }
-        };
-
-        audioRef.current.load();
-      } catch (err) {
-        console.warn('Could not load audio, playing lyrics only:', err);
-        startLyricsOnly();
-      }
-    } else {
-      if (isPlaying) {
+    console.log('▶️ Play button clicked, isPlaying:', isPlaying, 'lyrics.length:', lyrics.length);
+    
+    // If already playing, pause
+    if (isPlaying) {
+      if (audioRef.current) {
         audioRef.current.pause();
+      }
+      setIsPlaying(false);
+      if (lyricsIntervalRef.current) {
+        clearInterval(lyricsIntervalRef.current);
+      }
+      console.log('⏸️ Paused');
+      return;
+    }
+
+    // Always start lyrics display when play is clicked
+    if (lyrics.length > 0) {
+      setIsPlaying(true);
+      startLyricsDisplay();
+    } else {
+      console.warn('⚠️ No lyrics loaded yet');
+      setIsPlaying(true);
+    }
+
+    // Handle audio
+    if (!audioRef.current) {
+      // Create new audio element
+      const audioUrl = '/music/neighborhood-reflection.mp3';
+      console.log('🎵 Loading audio from:', audioUrl);
+      audioRef.current = new Audio(audioUrl);
+      
+      // Set up event handlers
+      audioRef.current.onerror = (e) => {
+        console.warn('❌ Audio file not found at', audioUrl, '- playing lyrics only');
+        console.log('💡 To add audio: Place neighborhood-reflection.mp3 in client/public/music/');
+      };
+
+      audioRef.current.onended = () => {
+        console.log('🏁 Audio ended');
         setIsPlaying(false);
         if (lyricsIntervalRef.current) {
           clearInterval(lyricsIntervalRef.current);
         }
-      } else {
-        audioRef.current.play().catch((err) => {
-          console.warn('Play failed:', err);
-        });
-        setIsPlaying(true);
-        if (currentLineIndex === -1) {
-          startLyricsDisplay();
-        }
+      };
+
+      // Set preload
+      audioRef.current.preload = 'auto';
+      
+      // Try to play
+      try {
+        // Load the audio first
+        audioRef.current.load();
+        
+        // Function to try playing
+        const tryPlay = () => {
+          if (audioRef.current && !audioRef.current.paused) {
+            return; // Already playing
+          }
+          audioRef.current.play()
+            .then(() => {
+              console.log('✅ Audio playing successfully');
+            })
+            .catch((playError) => {
+              console.warn('⚠️ Audio play failed:', playError.message);
+              // Lyrics will still play
+            });
+        };
+
+        // Try immediately (might work if already loaded)
+        setTimeout(tryPlay, 100);
+        
+        // Also try when audio is ready
+        audioRef.current.addEventListener('canplay', tryPlay, { once: true });
+        audioRef.current.addEventListener('loadeddata', tryPlay, { once: true });
+        
+      } catch (err) {
+        console.warn('❌ Could not initialize audio:', err);
+        // Lyrics will still play
+      }
+    } else {
+      // Audio already exists, just play it
+      try {
+        await audioRef.current.play();
+        console.log('✅ Audio resumed');
+      } catch (err) {
+        console.warn('⚠️ Resume play failed:', err.message);
+        // Lyrics will still play
       }
     }
   };
@@ -131,10 +170,19 @@ const MusicPlayer = ({ isOpen, onClose }) => {
   };
 
   const startLyricsDisplay = () => {
-    if (lyrics.length === 0) return;
+    if (lyrics.length === 0) {
+      console.warn('No lyrics to display');
+      return;
+    }
+
+    // Clear any existing interval
+    if (lyricsIntervalRef.current) {
+      clearInterval(lyricsIntervalRef.current);
+    }
 
     setCurrentLineIndex(0);
     displayedLinesRef.current = [0];
+    console.log('🎵 Starting lyrics display, total lines:', lyrics.length);
 
     // Calculate timing: show each line for 3-4 seconds
     const lineDuration = 3500; // 3.5 seconds per line
@@ -145,6 +193,7 @@ const MusicPlayer = ({ isOpen, onClose }) => {
         if (nextIndex >= lyrics.length) {
           clearInterval(lyricsIntervalRef.current);
           setIsPlaying(false);
+          console.log('✅ Lyrics finished');
           return prevIndex;
         }
         // Keep track of displayed lines for fade out animation
