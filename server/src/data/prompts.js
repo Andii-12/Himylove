@@ -1,7 +1,7 @@
 module.exports = {
   question: {
-    title: 'Do you love me?',
-    subtitle: 'Be honest... the Yes button is extra cozy 💕',
+    title: 'Are you ready to next date ?',
+    subtitle: '',
     buttons: {
       yes: 'Absolutely YES!',
       no: 'Umm... no?',

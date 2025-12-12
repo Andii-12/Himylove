@@ -13,7 +13,7 @@ const INTRO_GIF_OPTIONS = [
 const QUESTION_GIF_URL =
   'https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExdm1oN3V1Mjcwa21kZWUzajAwZGdpZjNmOGUyejA4MDgxdzB6M3R4YiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/1JmGiBtqTuehfYxuy9/giphy.gif';
 const FINAL_QUESTION = {
-  title: 'I love you too 💞',
+  title: 'Good Choice 💞',
   subtitle: '',
   button: 'Press here → 😘',
 };
@@ -25,7 +25,7 @@ const HEART_FALLBACK =
 const fallbackContent = {
   prompts: {
     question: {
-      title: 'Do you love me?',
+      title: 'Are you ready to next date ?',
       subtitle: 'Warning: clicking yes may trigger unstoppable cuddles.',
       buttons: {
         yes: 'Yes, obviously!',
@@ -52,12 +52,14 @@ const LoveExperience = () => {
   const [loadingPrompts, setLoadingPrompts] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showLoveBurst, setShowLoveBurst] = useState(false);
-  const [showWhyPrompt, setShowWhyPrompt] = useState(false);
-  const [whyText, setWhyText] = useState('');
-  const [isSubmittingWhy, setIsSubmittingWhy] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
-  const [whyError, setWhyError] = useState('');
   const [showMusicPlayer, setShowMusicPlayer] = useState(false);
+  const [drinkChoice, setDrinkChoice] = useState('');
+  const [activityChoice, setActivityChoice] = useState('');
+  const [activityDetail, setActivityDetail] = useState('');
+  const [dressHeight, setDressHeight] = useState('');
+  const [dressWeight, setDressWeight] = useState('');
+  const [dateChoice, setDateChoice] = useState('');
   const noButtonCooldownRef = useRef(0);
 
   const question = content?.prompts?.question || fallbackContent.prompts.question;
@@ -125,7 +127,8 @@ const LoveExperience = () => {
 
       if (!response.ok) throw new Error('Unable to save response');
 
-      setShowWhyPrompt(true);
+      setStatusMessage('Good');
+      setCurrentView('good');
     } catch (error) {
       console.error(error);
     } finally {
@@ -133,29 +136,28 @@ const LoveExperience = () => {
     }
   };
 
-  const handleWhySubmit = async (event) => {
-    event.preventDefault();
-    if (!whyText.trim()) {
-      setWhyError('Please tell me why 💕');
-      return;
-    }
-    setWhyError('');
-    setIsSubmittingWhy(true);
+  const submitChoices = async () => {
+    const summary = [
+      drinkChoice ? `Drink: ${drinkChoice}` : null,
+      activityChoice ? `Activity: ${activityChoice}` : null,
+      activityDetail ? `Detail: ${activityDetail}` : null,
+      dressHeight ? `Height: ${dressHeight}` : null,
+      dressWeight ? `Weight: ${dressWeight}` : null,
+      dateChoice ? `Date: ${dateChoice}` : null,
+    ]
+      .filter(Boolean)
+      .join(' | ');
+
+    if (!summary) return;
+
     try {
-      const response = await fetch(`${API_BASE}/api/love/responses`, {
+      await fetch(`${API_BASE}/api/love/responses`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ answer: 'yes', note: whyText.trim() }),
+        body: JSON.stringify({ answer: 'yes', note: summary }),
       });
-      if (!response.ok) throw new Error('Unable to save why note');
     } catch (error) {
-      console.error(error);
-    } finally {
-      setIsSubmittingWhy(false);
-      setShowWhyPrompt(false);
-      setWhyText('');
-      setStatusMessage('');
-      setCurrentView('final');
+      console.error('Failed to sync choices', error);
     }
   };
 
@@ -214,6 +216,91 @@ const LoveExperience = () => {
     );
   }
 
+  if (currentView === 'good') {
+    return (
+      <GoodView
+        statusMessage={statusMessage}
+        onNext={() => setCurrentView('homeDate')}
+        showMusicPlayer={showMusicPlayer}
+        setShowMusicPlayer={setShowMusicPlayer}
+      />
+    );
+  }
+
+  if (currentView === 'homeDate') {
+    return (
+      <HomeDateView
+        onYes={() => setCurrentView('chooseDate')}
+        onNo={() => setCurrentView('homeDate')}
+        showMusicPlayer={showMusicPlayer}
+        setShowMusicPlayer={setShowMusicPlayer}
+      />
+    );
+  }
+
+  if (currentView === 'chooseDate') {
+    return (
+      <ChooseDateView
+        onSelect={(choice) => setDrinkChoice(choice)}
+        onNext={() => setCurrentView('chooseActivity')}
+        showMusicPlayer={showMusicPlayer}
+        setShowMusicPlayer={setShowMusicPlayer}
+      />
+    );
+  }
+
+  if (currentView === 'chooseActivity') {
+    return (
+      <ChooseActivityView
+        onSelectActivity={(choice) => setActivityChoice(choice)}
+        onSelectDetail={(detail) => setActivityDetail(detail)}
+        onFinish={() => setCurrentView('dress')}
+        showMusicPlayer={showMusicPlayer}
+        setShowMusicPlayer={setShowMusicPlayer}
+      />
+    );
+  }
+
+  if (currentView === 'dress') {
+    return (
+      <DressView
+        onYes={() => setCurrentView('dressDetails')}
+        onNo={() => setCurrentView('final')}
+        showMusicPlayer={showMusicPlayer}
+        setShowMusicPlayer={setShowMusicPlayer}
+      />
+    );
+  }
+
+  if (currentView === 'dressDetails') {
+    return (
+      <DressDetailsView
+        onSubmit={({ height, weight }) => {
+          setDressHeight(height);
+          setDressWeight(weight);
+          setCurrentView('dateSelect');
+        }}
+        onCancel={() => setCurrentView('dateSelect')}
+        showMusicPlayer={showMusicPlayer}
+        setShowMusicPlayer={setShowMusicPlayer}
+      />
+    );
+  }
+
+  if (currentView === 'dateSelect') {
+    return (
+      <DateSelectView
+        onChooseDate={(choice) => setDateChoice(choice)}
+        onDone={async () => {
+          await submitChoices();
+          setCurrentView('final');
+        }}
+        showMusicPlayer={showMusicPlayer}
+        setShowMusicPlayer={setShowMusicPlayer}
+      />
+    );
+  }
+
   if (currentView === 'final') {
     return <FinalQuestionView showMusicPlayer={showMusicPlayer} setShowMusicPlayer={setShowMusicPlayer} />;
   }
@@ -263,36 +350,477 @@ const LoveExperience = () => {
           {showLoveBurst && <div className="love-burst">💖</div>}
         </div>
       </div>
-      {showWhyPrompt && (
-        <div className="why-overlay">
-          <div className="why-card">
-            <h2>Why?</h2>
-            <p className="subtitle">Give me just one adorable reason.</p>
-            <form onSubmit={handleWhySubmit}>
-              <input
-                type="text"
-                placeholder="Because..."
-                value={whyText}
-                onChange={(event) => {
-                  setWhyText(event.target.value);
-                  if (whyError) setWhyError('');
-                }}
-                required
-              />
-              {whyError && <p className="status-message">{whyError}</p>}
-              <div className="why-actions">
-                <button
-                  type="submit"
-                  className="love-btn love-btn--yes"
-                  disabled={isSubmittingWhy || !whyText.trim()}
-                >
-                  {isSubmittingWhy ? 'Sending...' : 'Submit'}
-                </button>
-              </div>
-            </form>
+    </main>
+  );
+}
+
+function GoodView({ statusMessage, onNext, showMusicPlayer, setShowMusicPlayer }) {
+  const displayMessage = statusMessage || 'Good';
+
+  if (showMusicPlayer) {
+    return <MusicPlayer isOpen={showMusicPlayer} onClose={() => setShowMusicPlayer(false)} />;
+  }
+
+  return (
+    <main className="app-shell">
+      <button
+        className="music-section-btn"
+        onClick={() => setShowMusicPlayer(true)}
+        title="Music"
+      >
+        🎵
+      </button>
+      <FloatingHearts count={20} />
+      <div className="question-screen">
+        <p className="eyebrow">next phase</p>
+        <h1>{displayMessage}</h1>
+        <img
+          className="question-gif"
+          src={FINAL_GIF_URL}
+          alt="Happy gif"
+          onError={(event) => {
+            event.currentTarget.onerror = null;
+            event.currentTarget.src = HEART_FALLBACK;
+          }}
+        />
+        <div className="final-button-row">
+          <button className="love-btn love-btn--yes" onClick={onNext}>
+            Next page
+          </button>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+function HomeDateView({ onYes, onNo, showMusicPlayer, setShowMusicPlayer }) {
+  const [showWhy, setShowWhy] = useState(false);
+
+  if (showMusicPlayer) {
+    return <MusicPlayer isOpen={showMusicPlayer} onClose={() => setShowMusicPlayer(false)} />;
+  }
+
+  return (
+    <main className="app-shell">
+      <button
+        className="music-section-btn"
+        onClick={() => setShowMusicPlayer(true)}
+        title="Music"
+      >
+        🎵
+      </button>
+      <FloatingHearts count={18} />
+      <div className="question-screen">
+        <p className="eyebrow">next phase</p>
+        <h1>Do you like Home Date ?</h1>
+        <img
+          className="question-gif"
+          src={QUESTION_GIF_URL}
+          alt="Cute cat gif"
+          onError={(event) => {
+            event.currentTarget.onerror = null;
+            event.currentTarget.src = HEART_FALLBACK;
+          }}
+        />
+        <p className="subtitle">i have plans ;)</p>
+        <div className="final-button-row">
+          <button className="love-btn love-btn--yes" onClick={onYes}>
+            Yes
+          </button>
+          <button
+            className="love-btn love-btn--no"
+            onClick={() => {
+              setShowWhy(true);
+            }}
+          >
+            No
+          </button>
+        </div>
+        {showWhy && (
+          <p className="status-message" style={{ marginTop: '1rem' }}>
+            WHY 😢
+          </p>
+        )}
+      </div>
+    </main>
+  );
+}
+
+function ChooseDateView({ onSelect, onNext, showMusicPlayer, setShowMusicPlayer }) {
+  const [selection, setSelection] = useState('');
+  const [customDrink, setCustomDrink] = useState('');
+  const dateIdeas = [
+    {
+      title: 'Chocolate milk',
+      img: 'https://www.sugarsaltmagic.com/wp-content/uploads/2020/10/Homemade-Chcolate-Milk-6FEATURED.jpg',
+    },
+    {
+      title: 'Juice',
+      img: 'https://play-lh.googleusercontent.com/9edIQw3IulBae6kreGNlm59hG4kloEGXE5bEfuoxcPGlI47Jz-ZJpl1dwO5Zn5U9UFM',
+    },
+    {
+      title: 'Wine',
+      img: 'https://bravofarms.com/cdn/shop/products/red-wine.jpg?v=1646253890',
+    },
+    {
+      title: 'Water',
+      img: 'https://www.thespruceeats.com/thmb/4Uxr_CKC7aR-UhEicIvVqLaiO0k=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/GettyImages-488636063-5ab2dbd8a8ff48049cfd36e8ad841ae5.jpg',
+    },
+  ];
+
+  if (showMusicPlayer) {
+    return <MusicPlayer isOpen={showMusicPlayer} onClose={() => setShowMusicPlayer(false)} />;
+  }
+
+  return (
+    <main className="app-shell">
+      <button
+        className="music-section-btn"
+        onClick={() => setShowMusicPlayer(true)}
+        title="Music"
+      >
+        🎵
+      </button>
+      <FloatingHearts count={16} />
+      <div className="question-screen">
+        <p className="eyebrow">date picker</p>
+        <h1>Choose drinks</h1>
+        <p className="subtitle">Pick your drink for the night</p>
+        <div className="date-grid">
+          {dateIdeas.map((idea) => (
+            <button
+              key={idea.title}
+              className={`date-card ${selection === idea.title ? 'date-card--selected' : ''}`}
+              onClick={() => {
+                setSelection(idea.title);
+                onSelect(idea.title);
+              }}
+              title={idea.title}
+            >
+              <img src={idea.img} alt={idea.title} loading="lazy" />
+              <span>{idea.title}</span>
+            </button>
+          ))}
+        </div>
+        {selection && (
+          <div className="final-button-row">
+            <button className="love-btn love-btn--yes" onClick={onNext}>
+              Next
+            </button>
+          </div>
+        )}
+        <div className="custom-section">
+          <p className="subtitle">Or add your own drink</p>
+          <div className="custom-row">
+            <input
+              type="text"
+              placeholder="Custom drink"
+              value={customDrink}
+              onChange={(e) => setCustomDrink(e.target.value)}
+            />
+            <button
+              className="love-btn love-btn--yes"
+              type="button"
+              onClick={() => {
+                if (customDrink.trim()) {
+                  setSelection(customDrink.trim());
+                  onSelect(customDrink.trim());
+                }
+              }}
+              disabled={!customDrink.trim()}
+            >
+              Select
+            </button>
           </div>
         </div>
-      )}
+      </div>
+    </main>
+  );
+}
+
+function ChooseActivityView({ onSelectActivity, onSelectDetail, onFinish, showMusicPlayer, setShowMusicPlayer }) {
+  const activities = [
+    {
+      title: 'Video game',
+      img: 'https://www.trade.gov.pl/wp-content/uploads/2023/08/gracze-scaled.jpg',
+    },
+    {
+      title: 'Canva',
+      img: 'https://novacolorpaint.com/cdn/shop/articles/Small_blank_canvas_on_an_easel_next_to_paint_brushes_4eae5aa5-2e24-4721-aa2f-fcb8775c1bfb.jpg?v=1756480709',
+    },
+    {
+      title: 'Movie',
+      img: 'https://www.nexigo.com/cdn/shop/articles/1_d206663e-0079-424a-93fb-5a254f114f91.jpg?v=1749545312',
+    },
+    {
+      title: 'Board game',
+      img: 'https://image.smythstoys.com/zoom/175649.webp',
+    },
+  ];
+
+  const [selection, setSelection] = useState('');
+  const [detailSelection, setDetailSelection] = useState('');
+
+  const detailOptions =
+    selection === 'Video game'
+      ? ['Valorant', 'Minecraft', 'Mortal Kombat 11']
+      : selection === 'Movie'
+        ? ['Horror', 'Anime', 'Adventure', 'Romantic']
+        : [];
+
+  const readyToNext = selection && (detailOptions.length === 0 || detailSelection);
+
+  if (showMusicPlayer) {
+    return <MusicPlayer isOpen={showMusicPlayer} onClose={() => setShowMusicPlayer(false)} />;
+  }
+
+  return (
+    <main className="app-shell">
+      <button
+        className="music-section-btn"
+        onClick={() => setShowMusicPlayer(true)}
+        title="Music"
+      >
+        🎵
+      </button>
+      <FloatingHearts count={16} />
+      <div className="question-screen">
+        <p className="eyebrow">date picker</p>
+        <h1>Choose activity</h1>
+        <p className="subtitle">Pick what we do next</p>
+        <div className="date-grid">
+          {activities.map((idea) => (
+            <button
+              key={idea.title}
+              className={`date-card ${selection === idea.title ? 'date-card--selected' : ''}`}
+              onClick={() => {
+                setSelection(idea.title);
+                setDetailSelection('');
+                onSelectActivity(idea.title);
+              }}
+              title={idea.title}
+            >
+              <img src={idea.img} alt={idea.title} loading="lazy" />
+              <span>{idea.title}</span>
+            </button>
+          ))}
+        </div>
+        {detailOptions.length > 0 && (
+          <div className="detail-section">
+            <p className="subtitle">
+              {selection === 'Video game' ? 'Which game?' : 'Which type of movie?'}
+            </p>
+            <div className="pill-row">
+              {detailOptions.map((option) => (
+                <button
+                  key={option}
+                  className={`pill ${detailSelection === option ? 'pill--active' : ''}`}
+                  onClick={() => {
+                    setDetailSelection(option);
+                    onSelectDetail(option);
+                  }}
+                  type="button"
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        <div className="custom-section">
+          <p className="subtitle">Or add your own activity</p>
+          <div className="custom-row">
+            <input
+              type="text"
+              placeholder="Custom activity"
+              value={detailSelection}
+              onChange={(e) => {
+                setDetailSelection(e.target.value);
+                onSelectDetail(e.target.value);
+              }}
+            />
+            <button
+              className="love-btn love-btn--yes"
+              type="button"
+              onClick={() => {
+                if (detailSelection.trim()) {
+                  setSelection(detailSelection.trim());
+                  onSelectActivity(detailSelection.trim());
+                }
+              }}
+              disabled={!detailSelection.trim()}
+            >
+              Select
+            </button>
+          </div>
+        </div>
+        {readyToNext && (
+          <div className="final-button-row">
+            <button className="love-btn love-btn--yes" onClick={onFinish}>
+              Next
+            </button>
+          </div>
+        )}
+      </div>
+    </main>
+  );
+}
+
+function DressView({ onYes, onNo, showMusicPlayer, setShowMusicPlayer }) {
+  if (showMusicPlayer) {
+    return <MusicPlayer isOpen={showMusicPlayer} onClose={() => setShowMusicPlayer(false)} />;
+  }
+
+  return (
+    <main className="app-shell">
+      <button
+        className="music-section-btn"
+        onClick={() => setShowMusicPlayer(true)}
+        title="Music"
+      >
+        🎵
+      </button>
+      <FloatingHearts count={18} />
+      <div className="question-screen">
+        <p className="eyebrow">style check</p>
+        <h1>Do you want dress like this ?</h1>
+        <img
+          className="question-gif"
+          src={`${process.env.PUBLIC_URL || ''}/cloth.jpg`}
+          alt="Outfit idea"
+          onError={(event) => {
+            event.currentTarget.onerror = null;
+            event.currentTarget.src = HEART_FALLBACK;
+          }}
+        />
+        <div className="final-button-row">
+          <button className="love-btn love-btn--yes" onClick={onYes}>
+            Yes
+          </button>
+          <button className="love-btn love-btn--no" onClick={onNo}>
+            No
+          </button>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+function DressDetailsView({ onSubmit, onCancel, showMusicPlayer, setShowMusicPlayer }) {
+  const [height, setHeight] = useState('');
+  const [weight, setWeight] = useState('');
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    onSubmit({ height, weight });
+  };
+
+  if (showMusicPlayer) {
+    return <MusicPlayer isOpen={showMusicPlayer} onClose={() => setShowMusicPlayer(false)} />;
+  }
+
+  return (
+    <main className="app-shell">
+      <button
+        className="music-section-btn"
+        onClick={() => setShowMusicPlayer(true)}
+        title="Music"
+      >
+        🎵
+      </button>
+      <FloatingHearts count={18} />
+      <div className="question-screen">
+        <p className="eyebrow">final details</p>
+        <h1>Share your fit details</h1>
+        <form className="dress-form" onSubmit={handleSubmit}>
+          <label className="dress-field">
+            Height
+            <input
+              type="text"
+              placeholder="e.g. 170 cm"
+              value={height}
+              onChange={(e) => setHeight(e.target.value)}
+              required
+            />
+          </label>
+          <label className="dress-field">
+            Weight
+            <input
+              type="text"
+              placeholder="e.g. 60 kg"
+              value={weight}
+              onChange={(e) => setWeight(e.target.value)}
+              required
+            />
+          </label>
+          <div className="final-button-row" style={{ marginTop: '1.25rem' }}>
+            <button className="love-btn love-btn--yes" type="submit">
+              Next
+            </button>
+            <button className="love-btn love-btn--no" type="button" onClick={onCancel}>
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </main>
+  );
+}
+
+function DateSelectView({ onChooseDate, onDone, showMusicPlayer, setShowMusicPlayer }) {
+  const dates = [
+    'December 23',
+    'December 24',
+    'December 25',
+    'December 26',
+    'December 27',
+    'December 28',
+    'December 29',
+    'December 30',
+  ];
+  const [selection, setSelection] = useState('');
+
+  if (showMusicPlayer) {
+    return <MusicPlayer isOpen={showMusicPlayer} onClose={() => setShowMusicPlayer(false)} />;
+  }
+
+  return (
+    <main className="app-shell">
+      <button
+        className="music-section-btn"
+        onClick={() => setShowMusicPlayer(true)}
+        title="Music"
+      >
+        🎵
+      </button>
+      <FloatingHearts count={16} />
+      <div className="question-screen">
+        <p className="eyebrow">calendar</p>
+        <h1>When we date ?</h1>
+        <p className="subtitle">Choose a date between Dec 23 and Dec 30</p>
+        <div className="pill-row date-pill-row">
+          {dates.map((date) => (
+            <button
+              key={date}
+              className={`pill ${selection === date ? 'pill--active' : ''}`}
+              onClick={() => {
+                setSelection(date);
+                onChooseDate(date);
+              }}
+              type="button"
+            >
+              {date}
+            </button>
+          ))}
+        </div>
+        {selection && (
+          <div className="final-button-row" style={{ marginTop: '1.25rem' }}>
+            <button className="love-btn love-btn--yes" onClick={onDone}>
+              Next
+            </button>
+          </div>
+        )}
+      </div>
     </main>
   );
 }
